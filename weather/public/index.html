@@ -10,6 +10,8 @@
 <body class="bg-slate-900 text-slate-100 min-h-screen flex items-center justify-center p-4">
 
     <div class="max-w-md w-full bg-slate-800/80 backdrop-blur-md rounded-3xl p-6 border border-slate-700/50 shadow-2xl">
+        
+        <!-- Yläpalkki -->
         <div class="flex justify-between items-start mb-6">
             <div>
                 <h1 class="text-2xl font-bold tracking-wide">Linnanmaa, Oulu</h1>
@@ -20,7 +22,8 @@
             </span>
         </div>
 
-        <div class="text-center my-8">
+        <!-- Päälämpötila -->
+        <div class="text-center my-6">
             <div class="text-6xl font-extrabold tracking-tight my-2">
                 <span id="tempnow">--</span><span class="text-emerald-400">°C</span>
             </div>
@@ -32,7 +35,8 @@
             </div>
         </div>
 
-        <div class="grid grid-cols-2 gap-3 text-sm">
+        <!-- Ruudukko muille säätiedoille -->
+        <div class="grid grid-cols-2 gap-3 text-sm mb-6">
             <div class="bg-slate-700/30 p-3.5 rounded-2xl border border-slate-700/30 flex items-center gap-3">
                 <i data-lucide="wind" class="text-emerald-400 w-6 h-6"></i>
                 <div>
@@ -67,70 +71,116 @@
                 </div>
             </div>
         </div>
+
+        <!-- Nappi historian näyttämiseen/piilottamiseen -->
+        <button id="toggle-history-btn" class="w-full py-2.5 px-4 bg-slate-700/50 hover:bg-slate-700 transition duration-200 text-xs font-semibold rounded-xl border border-slate-600/50 flex items-center justify-center gap-2">
+            <i data-lucide="history" class="w-4 h-4 text-emerald-400"></i>
+            <span>Näytä historia</span>
+        </button>
+
+        <!-- Historiatietojen säiliö (aluksi piilotettu Tailwind "hidden"-luokalla) -->
+        <div id="history-container" class="hidden mt-4 p-4 bg-slate-900/60 rounded-2xl border border-slate-700/50 max-h-60 overflow-y-auto">
+            <h3 class="text-xs font-semibold text-slate-400 mb-2 uppercase tracking-wider">Tietokannan historia</h3>
+            <ul id="history-list" class="space-y-1.5 text-xs text-slate-300 font-mono">
+                <!-- Data ilmestyy tähän -->
+            </ul>
+        </div>
+
     </div>
 
     <script>
+        // --- 1. Sään hakeminen ---
         async function fetchWeather() {
-    try {
-        // Haetaan säädata omalta taustapalvelimelta
-        const response = await fetch('/api/weather');
-        const xmlText = await response.text();
-        
-        // Muunnetaan XML-teksti DOM-muotoon
-        const parser = new DOMParser();
-        const xml = parser.parseFromString(xmlText, "text/xml");
+            try {
+                const response = await fetch('/api/weather');
+                const xmlText = await response.text();
+                
+                const parser = new DOMParser();
+                const xml = parser.parseFromString(xmlText, "text/xml");
+                const getValue = (tag) => xml.querySelector(tag)?.textContent || '--';
 
-        // Apufunktio XML-arvojen turvalliseen hakemiseen
-        const getValue = (tag) => xml.querySelector(tag)?.textContent || '--';
+                document.getElementById('tempnow').innerText = getValue('tempnow');
+                document.getElementById('temphi').innerText = getValue('temphi');
+                document.getElementById('templo').innerText = getValue('templo');
+                document.getElementById('windspeed').innerText = getValue('windspeed');
+                document.getElementById('windspeedmax').innerText = getValue('windspeedmax');
+                document.getElementById('humidity').innerText = getValue('humidity');
+                document.getElementById('dewpoint').innerText = getValue('dewpoint');
+                document.getElementById('airpressure').innerText = getValue('airpressure');
 
-        // Päivitetään perussäätiedot käyttöliittymään
-        document.getElementById('tempnow').innerText = getValue('tempnow');
-        document.getElementById('temphi').innerText = getValue('temphi');
-        document.getElementById('templo').innerText = getValue('templo');
-        document.getElementById('windspeed').innerText = getValue('windspeed');
-        document.getElementById('windspeedmax').innerText = getValue('windspeedmax');
-        document.getElementById('humidity').innerText = getValue('humidity');
-        document.getElementById('dewpoint').innerText = getValue('dewpoint');
-        document.getElementById('airpressure').innerText = getValue('airpressure');
+                const precip1d = xml.querySelector('precipitation[time="1d"]')?.textContent || '0.0';
+                document.getElementById('precip_1d').innerText = precip1d;
 
-        // Sademäärä (time="1d")
-        const precip1d = xml.querySelector('precipitation[time="1d"]')?.textContent || '0.0';
-        document.getElementById('precip_1d').innerText = precip1d;
+                const rawTime = getValue('time');
+                const formattedTimeStr = rawTime.trim().replace(' ', 'T').replace(' UTC', 'Z');
+                const utcDate = new Date(formattedTimeStr);
 
-        // Kellonajan käsittely ja muunnos Suomen aikaan
-        const rawTime = getValue('time'); // esim. "2026-09-14 07:39:58 UTC"
+                if (!isNaN(utcDate.getTime())) {
+                    const localTimeStr = utcDate.toLocaleString('fi-FI', {
+                        timeZone: 'Europe/Helsinki',
+                        day: 'numeric', month: 'numeric', year: 'numeric',
+                        hour: '2-digit', minute: '2-digit', second: '2-digit'
+                    });
+                    document.getElementById('time').innerText = "Päivitetty: " + localTimeStr;
+                } else {
+                    document.getElementById('time').innerText = "Päivitetty: " + rawTime;
+                }
 
-        // Muutetaan ISO 8601 -muotoon ("2026-09-14T07:39:58Z"), jonka kaikki selaimet ymmärtävät
-        const formattedTimeStr = rawTime.trim().replace(' ', 'T').replace(' UTC', 'Z');
-        const utcDate = new Date(formattedTimeStr);
+                if (window.lucide) lucide.createIcons();
 
-        if (!isNaN(utcDate.getTime())) {
-            const localTimeStr = utcDate.toLocaleString('fi-FI', {
-                timeZone: 'Europe/Helsinki',
-                day: 'numeric',
-                month: 'numeric',
-                year: 'numeric',
-                hour: '2-digit',
-                minute: '2-digit',
-                second: '2-digit'
-            });
-            document.getElementById('time').innerText = "Päivitetty: " + localTimeStr;
-        } else {
-            // Vararatkaisu, jos selaimen aikamuunnos epäonnistuu
-            document.getElementById('time').innerText = "Päivitetty: " + rawTime;
+            } catch (error) {
+                console.error("Virhe sään hakemisessa:", error);
+                document.getElementById('time').innerText = "Virhe tietojen latauksessa";
+            }
         }
 
-        // Päivitetään kuvakkeet
-        if (window.lucide) {
-            lucide.createIcons();
+        // --- 2. Historian hakeminen tietokannasta ---
+        async function loadHistory() {
+            const historyList = document.getElementById('history-list');
+            try {
+                const response = await fetch('/api/history');
+                const historyData = await response.json();
+
+                historyList.innerHTML = '';
+
+                if (!historyData || historyData.length === 0) {
+                    historyList.innerHTML = '<li class="text-slate-500">Ei historiatietoja saatavilla.</li>';
+                    return;
+                }
+
+                historyData.forEach(item => {
+                    const li = document.createElement('li');
+                    li.className = 'flex justify-between border-b border-slate-800/80 pb-1';
+                    const date = new Date(item.timestamp).toLocaleString('fi-FI', {
+                        day: 'numeric', month: 'numeric', hour: '2-digit', minute: '2-digit'
+                    });
+                    li.innerHTML = `<span>${date}</span><span class="text-emerald-400 font-bold">${item.temperature} °C</span>`;
+                    historyList.appendChild(li);
+                });
+            } catch (error) {
+                console.error("Virhe historian latauksessa:", error);
+                historyList.innerHTML = '<li class="text-rose-400">Virhe historian hakemisessa.</li>';
+            }
         }
 
-    } catch (error) {
-        console.error("Virhe sään hakemisessa:", error);
-        document.getElementById('time').innerText = "Virhe tietojen latauksessa";
-    }
-}
+        // --- 3. Napin toiminnallisuus ---
+        const historyBtn = document.getElementById('toggle-history-btn');
+        const historyContainer = document.getElementById('history-container');
 
+        historyBtn.addEventListener('click', () => {
+            const isHidden = historyContainer.classList.contains('hidden');
+            
+            if (isHidden) {
+                loadHistory(); // Haetaan tuoreet tiedot tietokannasta
+                historyContainer.classList.remove('hidden');
+                historyBtn.querySelector('span').textContent = 'Piilota historia';
+            } else {
+                historyContainer.classList.add('hidden');
+                historyBtn.querySelector('span').textContent = 'Näytä historia';
+            }
+        });
+
+        // Suoritetaan heti sivun latautuessa
         fetchWeather();
         setInterval(fetchWeather, 60000);
     </script>
