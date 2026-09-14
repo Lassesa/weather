@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="fi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sääasema - Linnanmaa</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+</head>
+<body class="bg-slate-900 text-slate-100 min-h-screen flex items-center justify-center p-4">
+
+    <div class="max-w-md w-full bg-slate-800/80 backdrop-blur-md rounded-3xl p-6 border border-slate-700/50 shadow-2xl">
+        <div class="flex justify-between items-start mb-6">
+            <div>
+                <h1 class="text-2xl font-bold tracking-wide">Linnanmaa, Oulu</h1>
+                <p id="time" class="text-xs text-slate-400 mt-1">Päivitetään...</p>
+            </div>
+            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                LIVE
+            </span>
+        </div>
+
+        <div class="text-center my-8">
+            <div class="text-6xl font-extrabold tracking-tight my-2">
+                <span id="tempnow">--</span><span class="text-emerald-400">°C</span>
+            </div>
+            <p class="text-slate-400 text-sm">Nykylämpötila</p>
+            
+            <div class="flex justify-center gap-4 text-xs font-medium mt-3 text-slate-300">
+                <span class="bg-slate-700/50 px-3 py-1 rounded-full">Ylin: <strong id="temphi">--</strong>°C</span>
+                <span class="bg-slate-700/50 px-3 py-1 rounded-full">Alin: <strong id="templo">--</strong>°C</span>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-3 text-sm">
+            <div class="bg-slate-700/30 p-3.5 rounded-2xl border border-slate-700/30 flex items-center gap-3">
+                <i data-lucide="wind" class="text-emerald-400 w-6 h-6"></i>
+                <div>
+                    <div class="text-xs text-slate-400">Tuulen nopeus</div>
+                    <div class="font-semibold"><span id="windspeed">--</span> m/s</div>
+                    <div class="text-[10px] text-slate-400">Puuska: <span id="windspeedmax">--</span> m/s</div>
+                </div>
+            </div>
+
+            <div class="bg-slate-700/30 p-3.5 rounded-2xl border border-slate-700/30 flex items-center gap-3">
+                <i data-lucide="droplets" class="text-blue-400 w-6 h-6"></i>
+                <div>
+                    <div class="text-xs text-slate-400">Ilmankosteus</div>
+                    <div class="font-semibold"><span id="humidity">--</span> %</div>
+                    <div class="text-[10px] text-slate-400">Kastepiste: <span id="dewpoint">--</span>°C</div>
+                </div>
+            </div>
+
+            <div class="bg-slate-700/30 p-3.5 rounded-2xl border border-slate-700/30 flex items-center gap-3">
+                <i data-lucide="gauge" class="text-purple-400 w-6 h-6"></i>
+                <div>
+                    <div class="text-xs text-slate-400">Ilmanpaine</div>
+                    <div class="font-semibold"><span id="airpressure">--</span> hPa</div>
+                </div>
+            </div>
+
+            <div class="bg-slate-700/30 p-3.5 rounded-2xl border border-slate-700/30 flex items-center gap-3">
+                <i data-lucide="cloud-rain" class="text-cyan-400 w-6 h-6"></i>
+                <div>
+                    <div class="text-xs text-slate-400">Sade (tänään)</div>
+                    <div class="font-semibold"><span id="precip_1d">--</span> mm</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        async function fetchWeather() {
+            try {
+                // Haetaan oma taustapalvelin-API
+                const response = await fetch('/api/weather');
+                const xmlText = await response.text();
+                
+                const parser = new DOMParser();
+                const xml = parser.parseFromString(xmlText, "text/xml");
+
+                const getValue = (tag) => xml.querySelector(tag)?.textContent || '--';
+
+                document.getElementById('tempnow').innerText = getValue('tempnow');
+                document.getElementById('temphi').innerText = getValue('temphi');
+                document.getElementById('templo').innerText = getValue('templo');
+                document.getElementById('windspeed').innerText = getValue('windspeed');
+                document.getElementById('windspeedmax').innerText = getValue('windspeedmax');
+                document.getElementById('humidity').innerText = getValue('humidity');
+                document.getElementById('dewpoint').innerText = getValue('dewpoint');
+                document.getElementById('airpressure').innerText = getValue('airpressure');
+                document.getElementById('time').innerText = "Päivitetty: " + getValue('time');
+
+                const precip1d = xml.querySelector('precipitation[time="1d"]')?.textContent || '0.0';
+                document.getElementById('precip_1d').innerText = precip1d;
+
+                lucide.createIcons();
+            } catch (error) {
+                console.error("Virhe:", error);
+            }
+        }
+
+        fetchWeather();
+        setInterval(fetchWeather, 60000);
+    </script>
+</body>
+</html>
