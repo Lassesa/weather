@@ -34,11 +34,14 @@ initDb();
 
 app.use(express.static(path.join(__dirname, 'public')));
 
-// Apufunktio XML-data hakemiseen turvallisesti
+// Apufunktio XML-data hakemiseen oikeasta willab.fi-osoitteesta
 async function fetchXmlData() {
-  const response = await axios.get('https://weather.dias.fi/xml/linnanmaa.xml', {
-    headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)' },
-    timeout: 5000
+  const response = await axios.get('https://weather.willab.fi/weather.xml', {
+    headers: { 
+      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)',
+      'Accept': 'text/xml,application/xml'
+    },
+    timeout: 8000
   });
   return response.data;
 }
@@ -61,14 +64,13 @@ async function fetchAndSaveWeather() {
         'INSERT INTO weather_data (temperature, windspeed, humidity) VALUES ($1, $2, $3)',
         [temp, wind, hum]
       );
-      console.log(`[${new Date().toLocaleTimeString()}] Tallennettu tietokantaan: ${temp}°C, ${wind}m/s, ${hum}%`);
+      console.log(`[${new Date().toLocaleTimeString()}] Tallennettu: ${temp}°C, ${wind}m/s, ${hum}%`);
     }
   } catch (err) {
     console.error('Virhe sään tallennuksessa:', err.message);
   }
 }
 
-// Tallennetaan 10 min välein
 setInterval(fetchAndSaveWeather, 10 * 60 * 1000);
 fetchAndSaveWeather();
 
