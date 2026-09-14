@@ -11,7 +11,7 @@ const pool = new Pool({
   ssl: process.env.DATABASE_URL ? { rejectUnauthorized: false } : false
 });
 
-// Luodaan taulu ja varmistetaan, että kaikki sarakkeet löytyvät
+// Luodaan taulu ja varmistetaan sarakkeet
 async function initDb() {
   try {
     await pool.query(`
@@ -23,10 +23,9 @@ async function initDb() {
         humidity NUMERIC(4, 1)
       );
     `);
-    // Lisätään sarakkeet jos taulu oli jo olemassa vanhalla kaavalla
     await pool.query(`ALTER TABLE weather_data ADD COLUMN IF NOT EXISTS windspeed NUMERIC(4, 1);`);
     await pool.query(`ALTER TABLE weather_data ADD COLUMN IF NOT EXISTS humidity NUMERIC(4, 1);`);
-    console.log('Tietokantataulu valmis ja ajan tasalla.');
+    console.log('Tietokantataulu alustettu.');
   } catch (err) {
     console.error('Virhe tietokannan alustuksessa:', err);
   }
@@ -35,11 +34,19 @@ initDb();
 
 app.use(express.static(path.join(__dirname, 'public')));
 
+// Apufunktio XML-data hakemiseen turvallisesti
+async function fetchXmlData() {
+  const response = await axios.get('https://weather.dias.fi/xml/linnanmaa.xml', {
+    headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)' },
+    timeout: 5000
+  });
+  return response.data;
+}
+
 // Haetaan sää ja tallennetaan tietokantaan
 async function fetchAndSaveWeather() {
   try {
-    const response = await axios.get('https://weather.dias.fi/xml/linnanmaa.xml');
-    const xmlText = response.data;
+    const xmlText = await fetchXmlData();
     
     const tempMatch = xmlText.match(/<tempnow>([\d.-]+)<\/tempnow>/);
     const windMatch = xmlText.match(/<windspeed>([\d.-]+)<\/windspeed>/);
@@ -54,35 +61,36 @@ async function fetchAndSaveWeather() {
         'INSERT INTO weather_data (temperature, windspeed, humidity) VALUES ($1, $2, $3)',
         [temp, wind, hum]
       );
-      console.log(`[${new Date().toLocaleTimeString()}] Tallennettu: Temp ${temp}°C, Tuuli ${wind}m/s, Kosteus ${hum}%`);
+      console.log(`[${new Date().toLocaleTimeString()}] Tallennettu tietokantaan: ${temp}°C, ${wind}m/s, ${hum}%`);
     }
   } catch (err) {
     console.error('Virhe sään tallennuksessa:', err.message);
   }
 }
 
-// Tallennetaan 10 minuutin välein
+// Tallennetaan 10 min välein
 setInterval(fetchAndSaveWeather, 10 * 60 * 1000);
 fetchAndSaveWeather();
 
-// API säädatan hakemiseen ulkoiselta palvelimelta
+// API säädatan hakemiseen selaimelle
 app.get('/api/weather', async (req, res) => {
   try {
-    const response = await axios.get('https://weather.dias.fi/xml/linnanmaa.xml');
+    const xmlData = await fetchXmlData();
     res.set('Content-Type', 'text/xml');
-    res.send(response.data);
+    res.send(xmlData);
   } catch (err) {
+    console.error('API /api/weather virhe:', err.message);
     res.status(500).send('Virhe säädatan hakemisessa');
   }
 });
 
-// API historiatietojen hakemiseen aikaikkunalla
+// API historiatietojen hakemiseen
 app.get('/api/history', async (req, res) => {
   const range = req.query.range || '24h';
   let timeFilter = "NOW() - INTERVAL '24 hours'";
   
   if (range === '7d') timeFilter = "NOW() - INTERVAL '7 days'";
-  if (range === 'all') timeFilter = "'1970-01-01'"; // Haetaan kaikki
+  if (range === 'all') timeFilter = "'1970-01-01'";
 
   try {
     const result = await pool.query(
@@ -93,9 +101,9 @@ app.get('/api/history', async (req, res) => {
     );
     res.json(result.rows);
   } catch (err) {
-    console.error(err);
+    console.error('API /api/history virhe:', err.message);
     res.status(500).json({ error: 'Tietokantavirhe' });
   }
 });
 
-app.listen(PORT, () => console.log(`Palvelin pyörii portissa ${PORT}`));
+app.listen(PORT, () => console.log(`Palvelin käynnissä portissa ${PORT}`));
