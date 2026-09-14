@@ -105,8 +105,8 @@
 
     <script>
         let myChart = null;
-        let currentMetric = 'temp'; // 'temp', 'wind', 'hum'
-        let currentRange = '24h';   // '24h', '7d', 'all'
+        let currentMetric = 'temp';
+        let currentRange = '24h';
         let cachedData = [];
 
         // --- 1. Sään hakeminen ---
@@ -174,29 +174,28 @@
                     : d.toLocaleDateString('fi-FI', { day: 'numeric', month: 'numeric', hour: '2-digit', minute: '2-digit' });
             });
 
-            // Määritetään asetukset valitun suureen mukaan
             let dataPoints = [];
             let labelText = '';
-            let color = '#34d399'; // Oletus vihreä
+            let color = '#34d399';
 
             if (currentMetric === 'temp') {
-                dataPoints = cachedData.map(i => i.temperature);
+                dataPoints = cachedData.map(i => parseFloat(i.temperature));
                 labelText = 'Lämpötila (°C)';
-                color = '#34d399'; // Emerald
+                color = '#34d399';
             } else if (currentMetric === 'wind') {
-                dataPoints = cachedData.map(i => i.windspeed);
+                dataPoints = cachedData.map(i => parseFloat(i.windspeed));
                 labelText = 'Tuulen nopeus (m/s)';
-                color = '#38bdf8'; // Sininen
+                color = '#38bdf8';
             } else if (currentMetric === 'hum') {
-                dataPoints = cachedData.map(i => i.humidity);
+                dataPoints = cachedData.map(i => parseFloat(i.humidity));
                 labelText = 'Ilmankosteus (%)';
-                color = '#a78bfa'; // Purppura
+                color = '#a78bfa';
             }
 
             const ctx = document.getElementById('weatherChart').getContext('2d');
 
             if (myChart) {
-                myChart.destroy(); // Tuhotaan vanha kuvaaja sulavan vaihdon takaamiseksi
+                myChart.destroy();
             }
 
             myChart = new Chart(ctx, {
@@ -207,11 +206,11 @@
                         label: labelText,
                         data: dataPoints,
                         borderColor: color,
-                        backgroundColor: color + '1A', // Läpinäkyvä tausta
+                        backgroundColor: color + '1A',
                         borderWidth: 2,
                         fill: true,
                         tension: 0.3,
-                        pointRadius: currentRange === 'all' ? 0 : 2
+                        pointRadius: cachedData.length === 1 ? 4 : (currentRange === 'all' ? 0 : 2)
                     }]
                 },
                 options: {
@@ -229,7 +228,6 @@
         function setMetric(metric) {
             currentMetric = metric;
             
-            // Päivitetään nappien tyylit
             ['temp', 'wind', 'hum'].forEach(m => {
                 const btn = document.getElementById(`btn-${m}`);
                 if (m === metric) {
@@ -245,7 +243,6 @@
         function setRange(range) {
             currentRange = range;
             
-            // Päivitetään tekstien värit
             ['24h', '7d', 'all'].forEach(r => {
                 const btn = document.getElementById(`range-${r}`);
                 if (r === range) {
