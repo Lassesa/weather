@@ -18,9 +18,16 @@
                 <h1 class="text-2xl font-bold tracking-wide">Linnanmaa, Oulu</h1>
                 <p id="time" class="text-xs text-slate-400 mt-1">Päivitetään...</p>
             </div>
-            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-                LIVE
-            </span>
+            <div class="flex items-center gap-2">
+                <!-- Kielivalitsin -->
+                <div class="flex bg-slate-700/50 rounded-full p-0.5 text-[10px] font-bold border border-slate-600/50">
+                    <button id="lang-fi" onclick="setLanguage('fi')" class="px-2 py-0.5 rounded-full bg-emerald-500 text-slate-900">FI</button>
+                    <button id="lang-en" onclick="setLanguage('en')" class="px-2 py-0.5 rounded-full text-slate-400 hover:text-slate-200">EN</button>
+                </div>
+                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                    LIVE
+                </span>
+            </div>
         </div>
 
         <!-- Nykylämpötila -->
@@ -28,11 +35,11 @@
             <div class="text-6xl font-extrabold tracking-tight my-2">
                 <span id="tempnow">--</span><span class="text-emerald-400">°C</span>
             </div>
-            <p class="text-slate-400 text-sm">Nykylämpötila</p>
+            <p id="lbl-curtemp" class="text-slate-400 text-sm">Nykylämpötila</p>
             
             <div class="flex justify-center gap-4 text-xs font-medium mt-3 text-slate-300">
-                <span class="bg-slate-700/50 px-3 py-1 rounded-full">Ylin: <strong id="temphi">--</strong>°C</span>
-                <span class="bg-slate-700/50 px-3 py-1 rounded-full">Alin: <strong id="templo">--</strong>°C</span>
+                <span class="bg-slate-700/50 px-3 py-1 rounded-full"><span id="lbl-hi">Ylin</span>: <strong id="temphi">--</strong>°C</span>
+                <span class="bg-slate-700/50 px-3 py-1 rounded-full"><span id="lbl-lo">Alin</span>: <strong id="templo">--</strong>°C</span>
             </div>
         </div>
 
@@ -41,25 +48,25 @@
             <div class="bg-slate-700/30 p-3.5 rounded-2xl border border-slate-700/30 flex items-center gap-3">
                 <i data-lucide="wind" class="text-emerald-400 w-6 h-6"></i>
                 <div>
-                    <div class="text-xs text-slate-400">Tuulen nopeus</div>
+                    <div id="lbl-wind" class="text-xs text-slate-400">Tuulen nopeus</div>
                     <div class="font-semibold"><span id="windspeed">--</span> m/s</div>
-                    <div class="text-[10px] text-slate-400">Puuska: <span id="windspeedmax">--</span> m/s</div>
+                    <div class="text-[10px] text-slate-400"><span id="lbl-gust">Puuska</span>: <span id="windspeedmax">--</span> m/s</div>
                 </div>
             </div>
 
             <div class="bg-slate-700/30 p-3.5 rounded-2xl border border-slate-700/30 flex items-center gap-3">
                 <i data-lucide="droplets" class="text-blue-400 w-6 h-6"></i>
                 <div>
-                    <div class="text-xs text-slate-400">Ilmankosteus</div>
+                    <div id="lbl-hum" class="text-xs text-slate-400">Ilmankosteus</div>
                     <div class="font-semibold"><span id="humidity">--</span> %</div>
-                    <div class="text-[10px] text-slate-400">Kastepiste: <span id="dewpoint">--</span>°C</div>
+                    <div class="text-[10px] text-slate-400"><span id="lbl-dew">Kastepiste</span>: <span id="dewpoint">--</span>°C</div>
                 </div>
             </div>
 
             <div class="bg-slate-700/30 p-3.5 rounded-2xl border border-slate-700/30 flex items-center gap-3">
                 <i data-lucide="gauge" class="text-purple-400 w-6 h-6"></i>
                 <div>
-                    <div class="text-xs text-slate-400">Ilmanpaine</div>
+                    <div id="lbl-press" class="text-xs text-slate-400">Ilmanpaine</div>
                     <div class="font-semibold"><span id="airpressure">--</span> hPa</div>
                 </div>
             </div>
@@ -67,7 +74,7 @@
             <div class="bg-slate-700/30 p-3.5 rounded-2xl border border-slate-700/30 flex items-center gap-3">
                 <i data-lucide="cloud-rain" class="text-cyan-400 w-6 h-6"></i>
                 <div>
-                    <div class="text-xs text-slate-400">Sade (tänään)</div>
+                    <div id="lbl-rain" class="text-xs text-slate-400">Sade (tänään)</div>
                     <div class="font-semibold"><span id="precip_1d">--</span> mm</div>
                 </div>
             </div>
@@ -76,7 +83,7 @@
         <!-- Nappi graafiosiion avaamiseen -->
         <button id="toggle-history-btn" class="w-full py-2.5 px-4 bg-slate-700/50 hover:bg-slate-700 transition duration-200 text-xs font-semibold rounded-xl border border-slate-600/50 flex items-center justify-center gap-2">
             <i data-lucide="trending-up" class="w-4 h-4 text-emerald-400"></i>
-            <span>Näytä graafit</span>
+            <span id="lbl-btn-graphs">Näytä graafit</span>
         </button>
 
         <!-- Graafiosio -->
@@ -93,9 +100,9 @@
             <div class="flex justify-end gap-2 mb-2 text-[10px]">
                 <button onclick="setRange('24h')" id="range-24h" class="text-emerald-400 font-bold">24h</button>
                 <span class="text-slate-600">|</span>
-                <button onclick="setRange('7d')" id="range-7d" class="text-slate-400 hover:text-slate-200">7 vrk</button>
+                <button onclick="setRange('7d')" id="range-7d" class="text-slate-400 hover:text-slate-200"><span id="lbl-7d">7 vrk</span></button>
                 <span class="text-slate-600">|</span>
-                <button onclick="setRange('all')" id="range-all" class="text-slate-400 hover:text-slate-200">Kaikki</button>
+                <button onclick="setRange('all')" id="range-all" class="text-slate-400 hover:text-slate-200"><span id="lbl-all">Kaikki</span></button>
             </div>
 
             <canvas id="weatherChart" class="w-full h-48"></canvas>
@@ -107,7 +114,111 @@
         let myChart = null;
         let currentMetric = 'temp';
         let currentRange = '24h';
+        let currentLang = 'fi';
         let cachedData = [];
+        let rawTimeStr = '';
+
+        const translations = {
+            fi: {
+                title: "Sääasema - Linnanmaa",
+                updated: "Päivitetty: ",
+                updating: "Päivitetään...",
+                curTemp: "Nykylämpötila",
+                hi: "Ylin",
+                lo: "Alin",
+                wind: "Tuulen nopeus",
+                gust: "Puuska",
+                hum: "Ilmankosteus",
+                dew: "Kastepiste",
+                press: "Ilmanpaine",
+                rain: "Sade (tänään)",
+                showGraphs: "Näytä graafit",
+                hideGraphs: "Piilota graafit",
+                metricTemp: "Lämpötila",
+                metricWind: "Tuuli",
+                metricHum: "Kosteus",
+                range7d: "7 vrk",
+                rangeAll: "Kaikki",
+                chartTemp: "Lämpötila (°C)",
+                chartWind: "Tuulen nopeus (m/s)",
+                chartHum: "Ilmankosteus (%)",
+                locale: "fi-FI"
+            },
+            en: {
+                title: "Weather Station - Linnanmaa",
+                updated: "Updated: ",
+                updating: "Updating...",
+                curTemp: "Current Temperature",
+                hi: "High",
+                lo: "Low",
+                wind: "Wind Speed",
+                gust: "Gust",
+                hum: "Humidity",
+                dew: "Dew Point",
+                press: "Air Pressure",
+                rain: "Rain (today)",
+                showGraphs: "Show Graphs",
+                hideGraphs: "Hide Graphs",
+                metricTemp: "Temperature",
+                metricWind: "Wind",
+                metricHum: "Humidity",
+                range7d: "7 days",
+                rangeAll: "All",
+                chartTemp: "Temperature (°C)",
+                chartWind: "Wind Speed (m/s)",
+                chartHum: "Humidity (%)",
+                locale: "en-US"
+            }
+        };
+
+        function setLanguage(lang) {
+            currentLang = lang;
+            const t = translations[lang];
+
+            document.getElementById('lang-fi').className = lang === 'fi' ? "px-2 py-0.5 rounded-full bg-emerald-500 text-slate-900" : "px-2 py-0.5 rounded-full text-slate-400 hover:text-slate-200";
+            document.getElementById('lang-en').className = lang === 'en' ? "px-2 py-0.5 rounded-full bg-emerald-500 text-slate-900" : "px-2 py-0.5 rounded-full text-slate-400 hover:text-slate-200";
+
+            document.getElementById('lbl-curtemp').innerText = t.curTemp;
+            document.getElementById('lbl-hi').innerText = t.hi;
+            document.getElementById('lbl-lo').innerText = t.lo;
+            document.getElementById('lbl-wind').innerText = t.wind;
+            document.getElementById('lbl-gust').innerText = t.gust;
+            document.getElementById('lbl-hum').innerText = t.hum;
+            document.getElementById('lbl-dew').innerText = t.dew;
+            document.getElementById('lbl-press').innerText = t.press;
+            document.getElementById('lbl-rain').innerText = t.rain;
+
+            document.getElementById('btn-temp').innerText = t.metricTemp;
+            document.getElementById('btn-wind').innerText = t.metricWind;
+            document.getElementById('btn-hum').innerText = t.metricHum;
+            document.getElementById('lbl-7d').innerText = t.range7d;
+            document.getElementById('lbl-all').innerText = t.rangeAll;
+
+            const historyContainer = document.getElementById('history-container');
+            const isHidden = historyContainer.classList.contains('hidden');
+            document.getElementById('lbl-btn-graphs').innerText = isHidden ? t.showGraphs : t.hideGraphs;
+
+            if (rawTimeStr) updateTimeDisplay(rawTimeStr);
+            renderChart();
+        }
+
+        function updateTimeDisplay(rawTime) {
+            rawTimeStr = rawTime;
+            const t = translations[currentLang];
+            const formattedTimeStr = rawTime.trim().replace(' ', 'T').replace(' UTC', 'Z');
+            const utcDate = new Date(formattedTimeStr);
+
+            if (!isNaN(utcDate.getTime())) {
+                const localTimeStr = utcDate.toLocaleString(t.locale, {
+                    timeZone: 'Europe/Helsinki',
+                    day: 'numeric', month: 'numeric', year: 'numeric',
+                    hour: '2-digit', minute: '2-digit', second: '2-digit'
+                });
+                document.getElementById('time').innerText = t.updated + localTimeStr;
+            } else {
+                document.getElementById('time').innerText = t.updated + rawTime;
+            }
+        }
 
         // --- 1. Sään hakeminen ---
         async function fetchWeather() {
@@ -131,20 +242,7 @@
                 const precip1d = xml.querySelector('precipitation[time="1d"]')?.textContent || '0.0';
                 document.getElementById('precip_1d').innerText = precip1d;
 
-                const rawTime = getValue('time');
-                const formattedTimeStr = rawTime.trim().replace(' ', 'T').replace(' UTC', 'Z');
-                const utcDate = new Date(formattedTimeStr);
-
-                if (!isNaN(utcDate.getTime())) {
-                    const localTimeStr = utcDate.toLocaleString('fi-FI', {
-                        timeZone: 'Europe/Helsinki',
-                        day: 'numeric', month: 'numeric', year: 'numeric',
-                        hour: '2-digit', minute: '2-digit', second: '2-digit'
-                    });
-                    document.getElementById('time').innerText = "Päivitetty: " + localTimeStr;
-                } else {
-                    document.getElementById('time').innerText = "Päivitetty: " + rawTime;
-                }
+                updateTimeDisplay(getValue('time'));
 
                 if (window.lucide) lucide.createIcons();
 
@@ -167,11 +265,13 @@
         function renderChart() {
             if (!cachedData || cachedData.length === 0) return;
 
+            const t = translations[currentLang];
+
             const labels = cachedData.map(item => {
                 const d = new Date(item.timestamp);
                 return currentRange === '24h' 
-                    ? d.toLocaleTimeString('fi-FI', { hour: '2-digit', minute: '2-digit' })
-                    : d.toLocaleDateString('fi-FI', { day: 'numeric', month: 'numeric', hour: '2-digit', minute: '2-digit' });
+                    ? d.toLocaleTimeString(t.locale, { hour: '2-digit', minute: '2-digit' })
+                    : d.toLocaleDateString(t.locale, { day: 'numeric', month: 'numeric', hour: '2-digit', minute: '2-digit' });
             });
 
             let dataPoints = [];
@@ -180,15 +280,15 @@
 
             if (currentMetric === 'temp') {
                 dataPoints = cachedData.map(i => parseFloat(i.temperature));
-                labelText = 'Lämpötila (°C)';
+                labelText = t.chartTemp;
                 color = '#34d399';
             } else if (currentMetric === 'wind') {
                 dataPoints = cachedData.map(i => parseFloat(i.windspeed));
-                labelText = 'Tuulen nopeus (m/s)';
+                labelText = t.chartWind;
                 color = '#38bdf8';
             } else if (currentMetric === 'hum') {
                 dataPoints = cachedData.map(i => parseFloat(i.humidity));
-                labelText = 'Ilmankosteus (%)';
+                labelText = t.chartHum;
                 color = '#a78bfa';
             }
 
@@ -260,13 +360,15 @@
 
         historyBtn.addEventListener('click', () => {
             const isHidden = historyContainer.classList.contains('hidden');
+            const t = translations[currentLang];
+
             if (isHidden) {
                 historyContainer.classList.remove('hidden');
                 loadGraphData();
-                historyBtn.querySelector('span').textContent = 'Piilota graafit';
+                document.getElementById('lbl-btn-graphs').textContent = t.hideGraphs;
             } else {
                 historyContainer.classList.add('hidden');
-                historyBtn.querySelector('span').textContent = 'Näytä graafit';
+                document.getElementById('lbl-btn-graphs').textContent = t.showGraphs;
             }
         });
 
