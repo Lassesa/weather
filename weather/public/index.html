@@ -6,7 +6,6 @@
     <title>Sääasema - Linnanmaa</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
-    <!-- Chart.js kuvaajaa varten -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body class="bg-slate-900 text-slate-100 min-h-screen flex items-center justify-center p-4">
@@ -24,7 +23,7 @@
             </span>
         </div>
 
-        <!-- Päälämpötila -->
+        <!-- Nykylämpötila -->
         <div class="text-center my-6">
             <div class="text-6xl font-extrabold tracking-tight my-2">
                 <span id="tempnow">--</span><span class="text-emerald-400">°C</span>
@@ -37,7 +36,7 @@
             </div>
         </div>
 
-        <!-- Ruudukko muille säätiedoille -->
+        <!-- Säätietoruudukko -->
         <div class="grid grid-cols-2 gap-3 text-sm mb-6">
             <div class="bg-slate-700/30 p-3.5 rounded-2xl border border-slate-700/30 flex items-center gap-3">
                 <i data-lucide="wind" class="text-emerald-400 w-6 h-6"></i>
@@ -74,22 +73,41 @@
             </div>
         </div>
 
-        <!-- Nappi historian näyttämiseen/piilottamiseen -->
+        <!-- Nappi graafiosiion avaamiseen -->
         <button id="toggle-history-btn" class="w-full py-2.5 px-4 bg-slate-700/50 hover:bg-slate-700 transition duration-200 text-xs font-semibold rounded-xl border border-slate-600/50 flex items-center justify-center gap-2">
             <i data-lucide="trending-up" class="w-4 h-4 text-emerald-400"></i>
-            <span>Näytä lämpötilagraafi</span>
+            <span>Näytä graafit</span>
         </button>
 
-        <!-- Graafin säiliö -->
+        <!-- Graafiosio -->
         <div id="history-container" class="hidden mt-4 p-4 bg-slate-900/60 rounded-2xl border border-slate-700/50">
-            <h3 class="text-xs font-semibold text-slate-400 mb-3 uppercase tracking-wider">Lämpötila viime tunneilta</h3>
-            <canvas id="tempChart" class="w-full h-48"></canvas>
+            
+            <!-- Graafin valintanapit (Lämpötila / Tuuli / Kosteus) -->
+            <div class="flex gap-1 mb-3 bg-slate-800 p-1 rounded-xl">
+                <button onclick="setMetric('temp')" id="btn-temp" class="flex-1 py-1 text-xs font-semibold rounded-lg bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">Lämpötila</button>
+                <button onclick="setMetric('wind')" id="btn-wind" class="flex-1 py-1 text-xs font-semibold rounded-lg text-slate-400 hover:text-slate-200">Tuuli</button>
+                <button onclick="setMetric('hum')" id="btn-hum" class="flex-1 py-1 text-xs font-semibold rounded-lg text-slate-400 hover:text-slate-200">Kosteus</button>
+            </div>
+
+            <!-- Aikaikkunan valinta (24h / 7d / Kaikki) -->
+            <div class="flex justify-end gap-2 mb-2 text-[10px]">
+                <button onclick="setRange('24h')" id="range-24h" class="text-emerald-400 font-bold">24h</button>
+                <span class="text-slate-600">|</span>
+                <button onclick="setRange('7d')" id="range-7d" class="text-slate-400 hover:text-slate-200">7 vrk</button>
+                <span class="text-slate-600">|</span>
+                <button onclick="setRange('all')" id="range-all" class="text-slate-400 hover:text-slate-200">Kaikki</button>
+            </div>
+
+            <canvas id="weatherChart" class="w-full h-48"></canvas>
         </div>
 
     </div>
 
     <script>
-        let myChart = null; // Säilytetään kuvaaja-instanssi
+        let myChart = null;
+        let currentMetric = 'temp'; // 'temp', 'wind', 'hum'
+        let currentRange = '24h';   // '24h', '7d', 'all'
+        let cachedData = [];
 
         // --- 1. Sään hakeminen ---
         async function fetchWeather() {
@@ -132,94 +150,129 @@
 
             } catch (error) {
                 console.error("Virhe sään hakemisessa:", error);
-                document.getElementById('time').innerText = "Virhe tietojen latauksessa";
             }
         }
 
-        // --- 2. Graafin luominen ja tietokantadatan lataus ---
-        async function loadHistoryGraph() {
+        // --- 2. Graafidatan lataus ja piirto ---
+        async function loadGraphData() {
             try {
-                const response = await fetch('/api/history');
-                const historyData = await response.json();
-
-                if (!historyData || historyData.length === 0) return;
-
-                // Tietokannassa uusimmat ovat ensimmäisenä, käännetään järjestys kuvaajaa varten (vanhin -> uusin)
-                const sortedData = [...historyData].reverse();
-
-                const labels = sortedData.map(item => {
-                    const d = new Date(item.timestamp);
-                    return d.toLocaleTimeString('fi-FI', { hour: '2-digit', minute: '2-digit' });
-                });
-                const temps = sortedData.map(item => item.temperature);
-
-                const ctx = document.getElementById('tempChart').getContext('2d');
-
-                // Jos kuvaaja on jo olemassa, päivitetään data
-                if (myChart) {
-                    myChart.data.labels = labels;
-                    myChart.data.datasets[0].data = temps;
-                    myChart.update();
-                    return;
-                }
-
-                // Luodaan uusi upea kuvaaja
-                myChart = new Chart(ctx, {
-                    type: 'line',
-                    data: {
-                        labels: labels,
-                        datasets: [{
-                            label: 'Lämpötila (°C)',
-                            data: temps,
-                            borderColor: '#34d399', // Emerald green
-                            backgroundColor: 'rgba(52, 211, 153, 0.1)',
-                            borderWidth: 2,
-                            fill: true,
-                            tension: 0.3, // Tekee viivasta pehmeästi kaartuvan
-                            pointRadius: 3,
-                            pointBackgroundColor: '#34d399'
-                        }]
-                    },
-                    options: {
-                        responsive: true,
-                        plugins: {
-                            legend: { display: false } // Piilotetaan turha selite
-                        },
-                        scales: {
-                            x: {
-                                ticks: { color: '#94a3b8', font: { size: 10 } },
-                                grid: { color: 'rgba(51, 65, 85, 0.3)' }
-                            },
-                            y: {
-                                ticks: { color: '#94a3b8', font: { size: 10 } },
-                                grid: { color: 'rgba(51, 65, 85, 0.3)' }
-                            }
-                        }
-                    }
-                });
+                const response = await fetch(`/api/history?range=${currentRange}`);
+                cachedData = await response.json();
+                renderChart();
             } catch (error) {
-                console.error("Virhe graafin latauksessa:", error);
+                console.error("Virhe graafidatan latauksessa:", error);
             }
         }
 
-        // --- 3. Napin kuuntelija ---
+        function renderChart() {
+            if (!cachedData || cachedData.length === 0) return;
+
+            const labels = cachedData.map(item => {
+                const d = new Date(item.timestamp);
+                return currentRange === '24h' 
+                    ? d.toLocaleTimeString('fi-FI', { hour: '2-digit', minute: '2-digit' })
+                    : d.toLocaleDateString('fi-FI', { day: 'numeric', month: 'numeric', hour: '2-digit', minute: '2-digit' });
+            });
+
+            // Määritetään asetukset valitun suureen mukaan
+            let dataPoints = [];
+            let labelText = '';
+            let color = '#34d399'; // Oletus vihreä
+
+            if (currentMetric === 'temp') {
+                dataPoints = cachedData.map(i => i.temperature);
+                labelText = 'Lämpötila (°C)';
+                color = '#34d399'; // Emerald
+            } else if (currentMetric === 'wind') {
+                dataPoints = cachedData.map(i => i.windspeed);
+                labelText = 'Tuulen nopeus (m/s)';
+                color = '#38bdf8'; // Sininen
+            } else if (currentMetric === 'hum') {
+                dataPoints = cachedData.map(i => i.humidity);
+                labelText = 'Ilmankosteus (%)';
+                color = '#a78bfa'; // Purppura
+            }
+
+            const ctx = document.getElementById('weatherChart').getContext('2d');
+
+            if (myChart) {
+                myChart.destroy(); // Tuhotaan vanha kuvaaja sulavan vaihdon takaamiseksi
+            }
+
+            myChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: labelText,
+                        data: dataPoints,
+                        borderColor: color,
+                        backgroundColor: color + '1A', // Läpinäkyvä tausta
+                        borderWidth: 2,
+                        fill: true,
+                        tension: 0.3,
+                        pointRadius: currentRange === 'all' ? 0 : 2
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        x: { ticks: { color: '#94a3b8', font: { size: 9 } }, grid: { color: 'rgba(51, 65, 85, 0.3)' } },
+                        y: { ticks: { color: '#94a3b8', font: { size: 9 } }, grid: { color: 'rgba(51, 65, 85, 0.3)' } }
+                    }
+                }
+            });
+        }
+
+        // --- 3. Interaktiot ja napit ---
+        function setMetric(metric) {
+            currentMetric = metric;
+            
+            // Päivitetään nappien tyylit
+            ['temp', 'wind', 'hum'].forEach(m => {
+                const btn = document.getElementById(`btn-${m}`);
+                if (m === metric) {
+                    btn.className = "flex-1 py-1 text-xs font-semibold rounded-lg bg-emerald-500/20 text-emerald-400 border border-emerald-500/30";
+                } else {
+                    btn.className = "flex-1 py-1 text-xs font-semibold rounded-lg text-slate-400 hover:text-slate-200";
+                }
+            });
+
+            renderChart();
+        }
+
+        function setRange(range) {
+            currentRange = range;
+            
+            // Päivitetään tekstien värit
+            ['24h', '7d', 'all'].forEach(r => {
+                const btn = document.getElementById(`range-${r}`);
+                if (r === range) {
+                    btn.className = "text-emerald-400 font-bold";
+                } else {
+                    btn.className = "text-slate-400 hover:text-slate-200";
+                }
+            });
+
+            loadGraphData();
+        }
+
         const historyBtn = document.getElementById('toggle-history-btn');
         const historyContainer = document.getElementById('history-container');
 
         historyBtn.addEventListener('click', () => {
             const isHidden = historyContainer.classList.contains('hidden');
-            
             if (isHidden) {
                 historyContainer.classList.remove('hidden');
-                loadHistoryGraph();
-                historyBtn.querySelector('span').textContent = 'Piilota graafi';
+                loadGraphData();
+                historyBtn.querySelector('span').textContent = 'Piilota graafit';
             } else {
                 historyContainer.classList.add('hidden');
-                historyBtn.querySelector('span').textContent = 'Näytä lämpötilagraafi';
+                historyBtn.querySelector('span').textContent = 'Näytä graafit';
             }
         });
 
-        // Käynnistys
         fetchWeather();
         setInterval(fetchWeather, 60000);
     </script>
