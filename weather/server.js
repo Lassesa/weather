@@ -46,20 +46,22 @@ async function fetchXmlData() {
 }
 
 // Haetaan sää ja tallennetaan tietokantaan
+// Haetaan sää ja tallennetaan tietokantaan
 async function fetchAndSaveWeather() {
   console.log(`[${new Date().toLocaleTimeString()}] Yritetään hakea ja tallentaa säädataa...`);
   try {
     const xmlText = await fetchXmlData();
     
-    const tempMatch = xmlText.match(/<tempnow>([\d.-]+)<\/tempnow>/);
-    const windMatch = xmlText.match(/<windspeed>([\d.-]+)<\/windspeed>/);
-    const humMatch = xmlText.match(/<humidity>([\d.-]+)<\/humidity>/);
+    // Sallitaan attribuutit (kuten unit="C") avaavissa tageissa
+    const tempMatch = xmlText.match(/<tempnow[^>]*>([\d.-]+)<\/tempnow>/i);
+    const windMatch = xmlText.match(/<windspeed[^>]*>([\d.-]+)<\/windspeed>/i);
+    const humMatch = xmlText.match(/<humidity[^>]*>([\d.-]+)<\/humidity>/i);
 
     const temp = tempMatch ? parseFloat(tempMatch[1]) : null;
     const wind = windMatch ? parseFloat(windMatch[1]) : null;
     const hum = humMatch ? parseFloat(humMatch[1]) : null;
 
-    console.log(`Jäsennetty data -> Temp: ${temp}, Wind: ${wind}, Hum: ${hum}`);
+    console.log(`Jäsennetty data -> Temp: ${temp}°C, Wind: ${wind}m/s, Hum: ${hum}%`);
 
     if (temp !== null && !isNaN(temp)) {
       await pool.query(
