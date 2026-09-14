@@ -71,47 +71,65 @@
 
     <script>
         async function fetchWeather() {
-            try {
-                // Haetaan oma taustapalvelin-API
-                const response = await fetch('/api/weather');
-                const xmlText = await response.text();
-                
-                const parser = new DOMParser();
-                const xml = parser.parseFromString(xmlText, "text/xml");
+    try {
+        // Haetaan säädata omalta taustapalvelimelta
+        const response = await fetch('/api/weather');
+        const xmlText = await response.text();
+        
+        // Muunnetaan XML-teksti DOM-muotoon
+        const parser = new DOMParser();
+        const xml = parser.parseFromString(xmlText, "text/xml");
 
-                const getValue = (tag) => xml.querySelector(tag)?.textContent || '--';
+        // Apufunktio XML-arvojen turvalliseen hakemiseen
+        const getValue = (tag) => xml.querySelector(tag)?.textContent || '--';
 
-                document.getElementById('tempnow').innerText = getValue('tempnow');
-                document.getElementById('temphi').innerText = getValue('temphi');
-                document.getElementById('templo').innerText = getValue('templo');
-                document.getElementById('windspeed').innerText = getValue('windspeed');
-                document.getElementById('windspeedmax').innerText = getValue('windspeedmax');
-                document.getElementById('humidity').innerText = getValue('humidity');
-                document.getElementById('dewpoint').innerText = getValue('dewpoint');
-                document.getElementById('airpressure').innerText = getValue('airpressure');
-                // Kellonajan muunnos Suomen aikaan (+3h kesällä / +2h talvella):
-                const rawTime = getValue('time');
-                const utcDate = new Date(rawTime.replace(' ', 'T'));
-                const localTimeStr = utcDate.toLocaleString('fi-FI', {
-                    timeZone: 'Europe/Helsinki',
-                    day: 'numeric',
-                    month: 'numeric',
-                    year: 'numeric',
-                    hour: '2-digit',
-                    minute: '2-digit',
-                    second: '2-digit'
-                });
+        // Päivitetään perussäätiedot käyttöliittymään
+        document.getElementById('tempnow').innerText = getValue('tempnow');
+        document.getElementById('temphi').innerText = getValue('temphi');
+        document.getElementById('templo').innerText = getValue('templo');
+        document.getElementById('windspeed').innerText = getValue('windspeed');
+        document.getElementById('windspeedmax').innerText = getValue('windspeedmax');
+        document.getElementById('humidity').innerText = getValue('humidity');
+        document.getElementById('dewpoint').innerText = getValue('dewpoint');
+        document.getElementById('airpressure').innerText = getValue('airpressure');
 
-                document.getElementById('time').innerText = "Päivitetty: " + localTimeStr;
+        // Sademäärä (time="1d")
+        const precip1d = xml.querySelector('precipitation[time="1d"]')?.textContent || '0.0';
+        document.getElementById('precip_1d').innerText = precip1d;
 
-                const precip1d = xml.querySelector('precipitation[time="1d"]')?.textContent || '0.0';
-                document.getElementById('precip_1d').innerText = precip1d;
+        // Kellonajan käsittely ja muunnos Suomen aikaan
+        const rawTime = getValue('time'); // esim. "2026-09-14 07:39:58 UTC"
 
-                lucide.createIcons();
-            } catch (error) {
-                console.error("Virhe:", error);
-            }
+        // Muutetaan ISO 8601 -muotoon ("2026-09-14T07:39:58Z"), jonka kaikki selaimet ymmärtävät
+        const formattedTimeStr = rawTime.trim().replace(' ', 'T').replace(' UTC', 'Z');
+        const utcDate = new Date(formattedTimeStr);
+
+        if (!isNaN(utcDate.getTime())) {
+            const localTimeStr = utcDate.toLocaleString('fi-FI', {
+                timeZone: 'Europe/Helsinki',
+                day: 'numeric',
+                month: 'numeric',
+                year: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit'
+            });
+            document.getElementById('time').innerText = "Päivitetty: " + localTimeStr;
+        } else {
+            // Vararatkaisu, jos selaimen aikamuunnos epäonnistuu
+            document.getElementById('time').innerText = "Päivitetty: " + rawTime;
         }
+
+        // Päivitetään kuvakkeet
+        if (window.lucide) {
+            lucide.createIcons();
+        }
+
+    } catch (error) {
+        console.error("Virhe sään hakemisessa:", error);
+        document.getElementById('time').innerText = "Virhe tietojen latauksessa";
+    }
+}
 
         fetchWeather();
         setInterval(fetchWeather, 60000);
