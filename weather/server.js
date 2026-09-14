@@ -11,7 +11,7 @@ const pool = new Pool({
   ssl: process.env.DATABASE_URL ? { rejectUnauthorized: false } : false
 });
 
-// Luodaan taulu ja varmistetaan sarakkeet
+// Luodaan taulu ja varmistetaan sarakkeet ennen palvelimen käynnistystä
 async function initDb() {
   try {
     await pool.query(`
@@ -25,16 +25,15 @@ async function initDb() {
     `);
     await pool.query(`ALTER TABLE weather_data ADD COLUMN IF NOT EXISTS windspeed NUMERIC(4, 1);`);
     await pool.query(`ALTER TABLE weather_data ADD COLUMN IF NOT EXISTS humidity NUMERIC(4, 1);`);
-    console.log('Tietokantataulu alustettu.');
+    console.log('Tietokantataulu alustettu ja valmis.');
   } catch (err) {
-    console.error('Virhe tietokannan alustuksessa:', err);
+    console.error('KRIITTINEN VIRHE tietokannan alustuksessa:', err);
   }
 }
-initDb();
 
 app.use(express.static(path.join(__dirname, 'public')));
 
-// Apufunktio XML-data hakemiseen oikeasta willab.fi-osoitteesta
+// Apufunktio XML-datan hakemiseen
 async function fetchXmlData() {
   const response = await axios.get('https://weather.willab.fi/weather.xml', {
     headers: { 
@@ -48,6 +47,7 @@ async function fetchXmlData() {
 
 // Haetaan sää ja tallennetaan tietokantaan
 async function fetchAndSaveWeather() {
+  console.log(`[${new Date().toLocaleTimeString()}] Yritetään hakea ja tallentaa säädataa...`);
   try {
     const xmlText = await fetchXmlData();
     
@@ -59,20 +59,21 @@ async function fetchAndSaveWeather() {
     const wind = windMatch ? parseFloat(windMatch[1]) : null;
     const hum = humMatch ? parseFloat(humMatch[1]) : null;
 
-    if (temp !== null) {
+    console.log(`Jäsennetty data -> Temp: ${temp}, Wind: ${wind}, Hum: ${hum}`);
+
+    if (temp !== null && !isNaN(temp)) {
       await pool.query(
         'INSERT INTO weather_data (temperature, windspeed, humidity) VALUES ($1, $2, $3)',
         [temp, wind, hum]
       );
-      console.log(`[${new Date().toLocaleTimeString()}] Tallennettu: ${temp}°C, ${wind}m/s, ${hum}%`);
+      console.log(`[OK] Tallennettu tietokantaan onnistuneesti!`);
+    } else {
+      console.warn('Lämpötiladataa ei löytynyt XML-vastauksesta.');
     }
   } catch (err) {
-    console.error('Virhe sään tallennuksessa:', err.message);
+    console.error('VIRHE sään tallennuksessa:', err.message);
   }
 }
-
-setInterval(fetchAndSaveWeather, 10 * 60 * 1000);
-fetchAndSaveWeather();
 
 // API säädatan hakemiseen selaimelle
 app.get('/api/weather', async (req, res) => {
@@ -108,4 +109,19 @@ app.get('/api/history', async (req, res) => {
   }
 });
 
-app.listen(PORT, () => console.log(`Palvelin käynnissä portissa ${PORT}`));
+// KÄYNNISTYSJÄRJESTYS: 1. Alusta DB -> 2. Käynnistä palvelin -> 3. Aloita sykli
+async function startServer() {
+  await initDb();
+
+  app.listen(PORT, () => {
+    console.log(`Palvelin käynnissä portissa ${PORT}`);
+    
+    // Suoritetaan ensimmäinen tallennus HETI käynnistyksen yhteydessä
+    fetchAndSaveWeather();
+    
+    // Suoritetaan sen jälkeen 10 minuutin välein
+    setInterval(fetchAndSaveWeather, 10 * 60 * 1000);
+  });
+}
+
+startServer();
