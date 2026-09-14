@@ -16,7 +16,7 @@ app.get('/api/weather', async (req, res) => {
         res.set('Content-Type', 'text/xml');
         res.send(xmlData);
     } catch (error) {
-        res.status(500).send('Virhe sään hakemisessa');
+        res.status(500).send('Virhe sään hakemisessa'); 
     }
 });
 

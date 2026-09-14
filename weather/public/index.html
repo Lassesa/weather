@@ -89,7 +89,20 @@
                 document.getElementById('humidity').innerText = getValue('humidity');
                 document.getElementById('dewpoint').innerText = getValue('dewpoint');
                 document.getElementById('airpressure').innerText = getValue('airpressure');
-                document.getElementById('time').innerText = "Päivitetty: " + getValue('time');
+                // Kellonajan muunnos Suomen aikaan (+3h kesällä / +2h talvella):
+                const rawTime = getValue('time');
+                const utcDate = new Date(rawTime.replace(' ', 'T'));
+                const localTimeStr = utcDate.toLocaleString('fi-FI', {
+                    timeZone: 'Europe/Helsinki',
+                    day: 'numeric',
+                    month: 'numeric',
+                    year: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    second: '2-digit'
+                });
+
+                document.getElementById('time').innerText = "Päivitetty: " + localTimeStr;
 
                 const precip1d = xml.querySelector('precipitation[time="1d"]')?.textContent || '0.0';
                 document.getElementById('precip_1d').innerText = precip1d;
